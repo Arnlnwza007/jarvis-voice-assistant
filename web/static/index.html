@@ -5,7 +5,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jarvis Voice Assistant</title>
+    <meta name="description" content="Jarvis AI Voice Assistant - Push-to-talk interface for voice commands">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.6);
+            --accent-cyan: #06d6a0;
+            --accent-blue: #118ab2;
+            --accent-purple: #7209b7;
+            --accent-pink: #f72585;
+            --accent-gold: #ffd60a;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --shadow-glow: 0 0 60px rgba(6, 214, 160, 0.15);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-full: 9999px;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,130 +39,258 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
             min-height: 100vh;
+            color: var(--text-primary);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated background */
+        .bg-gradient {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-gradient::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(6, 214, 160, 0.08) 0%, transparent 70%);
+            top: -200px;
+            right: -100px;
+            animation: floatOrb 20s ease-in-out infinite;
+        }
+
+        .bg-gradient::after {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(114, 9, 183, 0.06) 0%, transparent 70%);
+            bottom: -150px;
+            left: -100px;
+            animation: floatOrb 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes floatOrb {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(50px, -30px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-30px, 20px) scale(0.95);
+            }
+        }
+
+        /* Grid lines background */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Layout */
+        .app {
+            position: relative;
+            z-index: 1;
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .logo {
+            display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
+            gap: 0.6rem;
+            margin-bottom: 0.35rem;
         }
 
-        .container {
-            text-align: center;
-            padding: 2rem;
-            max-width: 600px;
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3);
         }
 
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #00d9ff, #00ff88);
+        .logo h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .subtitle {
-            color: #888;
-            margin-bottom: 2rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 400;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
-        .status {
+        /* Status bar */
+        .status-bar {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
             justify-content: center;
-            margin-bottom: 2rem;
+            margin-top: 1rem;
         }
 
-        .status-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-        }
-
-        .status-item.connected {
-            background: rgba(0, 255, 136, 0.2);
-            color: #00ff88;
-        }
-
-        .status-item.disconnected {
-            background: rgba(255, 68, 68, 0.2);
-            color: #ff4444;
-        }
-
-        .mic-button {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: none;
-            background: linear-gradient(135deg, #00d9ff, #00ff88);
-            cursor: pointer;
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius-full);
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
             transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .status-pill.connected .status-dot {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(6, 214, 160, 0.6);
+        }
+
+        .status-pill.disconnected .status-dot {
+            background: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+
+        .status-pill.connected {
+            border-color: rgba(6, 214, 160, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        .status-pill.disconnected {
+            border-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        /* WebSocket status */
+        .ws-status {
+            text-align: center;
+            margin-top: 0.6rem;
+            font-size: 0.65rem;
+            color: var(--text-muted);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 2rem;
-            box-shadow: 0 10px 40px rgba(0, 217, 255, 0.3);
+            gap: 0.35rem;
         }
 
-        .mic-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 15px 50px rgba(0, 217, 255, 0.5);
+        .ws-status .pulse {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--text-muted);
         }
 
-        .mic-button.recording {
-            animation: pulse 1s infinite;
-            background: linear-gradient(135deg, #ff4444, #ff8800);
+        .ws-status.connected .pulse {
+            background: var(--accent-cyan);
+            animation: pulse-dot 2s infinite;
         }
 
-        @keyframes pulse {
+        @keyframes pulse-dot {
 
             0%,
             100% {
-                transform: scale(1);
+                opacity: 1;
             }
 
             50% {
-                transform: scale(1.1);
+                opacity: 0.4;
             }
         }
 
-        .mic-button svg {
-            width: 60px;
-            height: 60px;
-            fill: #1a1a2e;
-        }
-
-        .instruction {
-            color: #888;
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
+        /* Chat area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 1rem;
+            min-height: 0;
         }
 
         .chat-box {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 1.5rem;
-            text-align: left;
-            min-height: 200px;
-            max-height: 400px;
+            flex: 1;
             overflow-y: auto;
+            padding: 1rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        .chat-box::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-box::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
         }
 
         .message {
             padding: 0.75rem 1rem;
-            margin: 0.5rem 0;
-            border-radius: 10px;
-            animation: fadeIn 0.3s ease;
+            border-radius: var(--radius-sm);
+            animation: slideUp 0.3s ease;
+            max-width: 90%;
+            line-height: 1.5;
+            font-size: 0.85rem;
         }
 
-        @keyframes fadeIn {
+        @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(8px);
             }
 
             to {
@@ -146,79 +300,395 @@
         }
 
         .message.user {
-            background: rgba(0, 217, 255, 0.2);
-            margin-left: 2rem;
+            background: rgba(17, 138, 178, 0.15);
+            border: 1px solid rgba(17, 138, 178, 0.2);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
         }
 
         .message.jarvis {
-            background: rgba(0, 255, 136, 0.2);
-            margin-right: 2rem;
+            background: rgba(6, 214, 160, 0.1);
+            border: 1px solid rgba(6, 214, 160, 0.15);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
         }
 
         .message.error {
-            background: rgba(255, 68, 68, 0.2);
-            color: #ff4444;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            align-self: center;
+            font-size: 0.8rem;
         }
 
         .message.function {
-            background: rgba(255, 200, 0, 0.2);
-            font-size: 0.85rem;
-            color: #ffc800;
+            background: rgba(255, 214, 10, 0.08);
+            border: 1px solid rgba(255, 214, 10, 0.12);
+            font-size: 0.75rem;
+            color: var(--accent-gold);
+            align-self: flex-start;
+            font-family: 'SF Mono', 'Fira Code', monospace;
         }
 
         .message-label {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             opacity: 0.7;
             margin-bottom: 0.25rem;
+        }
+
+        .message.user .message-label {
+            color: var(--accent-blue);
+        }
+
+        .message.jarvis .message-label {
+            color: var(--accent-cyan);
+        }
+
+        /* Mic section */
+        .mic-section {
+            padding-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        /* Audio visualizer */
+        .visualizer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            height: 30px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .visualizer.active {
+            opacity: 1;
+        }
+
+        .visualizer-bar {
+            width: 3px;
+            height: 4px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .visualizer.active .visualizer-bar {
+            animation: equalize 0.6s ease-in-out infinite alternate;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(2) {
+            animation-delay: 0.08s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(3) {
+            animation-delay: 0.16s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(4) {
+            animation-delay: 0.24s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(5) {
+            animation-delay: 0.32s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(6) {
+            animation-delay: 0.24s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(7) {
+            animation-delay: 0.16s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(8) {
+            animation-delay: 0.08s;
+        }
+
+        .visualizer.active .visualizer-bar:nth-child(9) {
+            animation-delay: 0s;
+        }
+
+        @keyframes equalize {
+            0% {
+                height: 4px;
+            }
+
+            100% {
+                height: 24px;
+            }
+        }
+
+        /* Mic button */
+        .mic-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mic-ring {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid rgba(6, 214, 160, 0.15);
+            transition: all 0.4s ease;
+        }
+
+        .mic-ring.recording {
+            border-color: rgba(247, 37, 133, 0.4);
+            animation: ring-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes ring-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.15);
+                opacity: 0.3;
+            }
+        }
+
+        .mic-button {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(145deg, var(--accent-cyan), var(--accent-blue));
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow:
+                0 8px 30px rgba(6, 214, 160, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 2;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .mic-button:hover {
+            transform: scale(1.05);
+            box-shadow:
+                0 12px 40px rgba(6, 214, 160, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .mic-button:active,
+        .mic-button.recording {
+            transform: scale(0.95);
+            background: linear-gradient(145deg, var(--accent-pink), var(--accent-purple));
+            box-shadow:
+                0 8px 30px rgba(247, 37, 133, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .mic-button svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+        }
+
+        .mic-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .mic-label.recording {
+            color: var(--accent-pink);
+        }
+
+        /* Processing indicator */
+        .processing {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-full);
+            background: rgba(6, 214, 160, 0.08);
+            border: 1px solid rgba(6, 214, 160, 0.15);
+        }
+
+        .processing.visible {
+            display: flex;
+            animation: slideUp 0.3s ease;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(6, 214, 160, 0.3);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-height: 700px) {
+            .app {
+                padding: 1rem;
+            }
+
+            .mic-button {
+                width: 72px;
+                height: 72px;
+            }
+
+            .mic-ring {
+                width: 100px;
+                height: 100px;
+            }
+
+            .mic-button svg {
+                width: 26px;
+                height: 26px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .app {
+                padding: 1rem 0.75rem;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>🤖 JARVIS</h1>
-        <p class="subtitle">Voice Assistant with Local AI</p>
+    <div class="bg-gradient"></div>
+    <div class="grid-bg"></div>
 
-        <div class="status">
-            <div class="status-item" id="discord-status">Discord: ...</div>
-            <div class="status-item" id="voice-status">Voice: ...</div>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🤖</div>
+                <h1>JARVIS</h1>
+            </div>
+            <p class="subtitle">Voice Assistant • Local AI</p>
+
+            <div class="status-bar">
+                <div class="status-pill" id="discord-status">
+                    <span class="status-dot"></span>
+                    <span>Discord</span>
+                </div>
+                <div class="status-pill" id="voice-status">
+                    <span class="status-dot"></span>
+                    <span>Voice</span>
+                </div>
+                <div class="status-pill" id="llm-status">
+                    <span class="status-dot"></span>
+                    <span>LLM</span>
+                </div>
+            </div>
+
+            <div class="ws-status" id="ws-status">
+                <span class="pulse"></span>
+                <span>Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Chat -->
+        <div class="chat-area">
+            <div class="chat-box" id="chat-box">
+                <div class="message jarvis">
+                    <div class="message-label">Jarvis</div>
+                    สวัสดีครับเจ้านาย พร้อมรับคำสั่งครับ 🤖
+                </div>
+            </div>
         </div>
 
-        <button class="mic-button" id="mic-btn">
-            <svg viewBox="0 0 24 24">
-                <path
-                    d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93V7h2v1c0 2.76 2.24 5 5 5s5-2.24 5-5V7h2v1c0 4.08-3.06 7.44-7 7.93V19h4v2H7v-2h4v-3.07z" />
-            </svg>
-        </button>
+        <!-- Mic control -->
+        <div class="mic-section">
+            <div class="visualizer" id="visualizer">
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+            </div>
 
-        <p class="instruction">กดค้างเพื่อพูด • ใช้ /join ใน Discord ก่อน</p>
+            <div class="mic-wrapper">
+                <div class="mic-ring" id="mic-ring"></div>
+                <button class="mic-button" id="mic-btn" aria-label="Push to talk">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.96.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.95-4.15a.988.988 0 00-.96-.85c-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08a6.993 6.993 0 005.91-5.78c.1-.6-.39-1.14-1-1.14z" />
+                    </svg>
+                </button>
+            </div>
 
-        <div class="chat-box" id="chat-box">
-            <div class="message jarvis">
-                <div class="message-label">Jarvis</div>
-                สวัสดีครับเจ้านาย พร้อมรับคำสั่งครับ
+            <span class="mic-label" id="mic-label">กดค้างเพื่อพูด</span>
+
+            <div class="processing" id="processing">
+                <div class="spinner"></div>
+                <span>กำลังประมวลผล...</span>
             </div>
         </div>
     </div>
 
     <script>
+        // Elements
+        const micBtn = document.getElementById('mic-btn');
+        const micRing = document.getElementById('mic-ring');
+        const micLabel = document.getElementById('mic-label');
+        const chatBox = document.getElementById('chat-box');
+        const visualizer = document.getElementById('visualizer');
+        const processing = document.getElementById('processing');
+        const discordStatus = document.getElementById('discord-status');
+        const voiceStatus = document.getElementById('voice-status');
+        const llmStatus = document.getElementById('llm-status');
+        const wsStatus = document.getElementById('ws-status');
+
         let ws = null;
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
+        let audioContext = null;
+        let analyser = null;
+        let animFrameId = null;
 
-        const micBtn = document.getElementById('mic-btn');
-        const chatBox = document.getElementById('chat-box');
-        const discordStatus = document.getElementById('discord-status');
-        const voiceStatus = document.getElementById('voice-status');
-
-        // Connect WebSocket
+        // WebSocket
         function connect() {
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             ws = new WebSocket(`${protocol}//${location.host}/ws/voice`);
 
             ws.onopen = () => {
-                console.log('Connected');
+                console.log('✅ WebSocket connected');
+                wsStatus.classList.add('connected');
+                wsStatus.querySelector('span:last-child').textContent = 'Connected';
                 updateStatus();
             };
 
@@ -228,18 +698,26 @@
             };
 
             ws.onclose = () => {
-                console.log('Disconnected, reconnecting...');
+                console.log('❌ Disconnected');
+                wsStatus.classList.remove('connected');
+                wsStatus.querySelector('span:last-child').textContent = 'Reconnecting...';
                 setTimeout(connect, 2000);
+            };
+
+            ws.onerror = () => {
+                wsStatus.classList.remove('connected');
             };
         }
 
         function handleMessage(data) {
+            processing.classList.remove('visible');
+
             if (data.type === 'transcription') {
                 addMessage('user', data.text);
             } else if (data.type === 'response') {
                 addMessage('jarvis', data.text);
                 if (data.function) {
-                    addMessage('function', `🔧 ${data.function}(${JSON.stringify(data.args || {})})`);
+                    addMessage('function', `⚡ ${data.function}(${JSON.stringify(data.args || {})})`);
                 }
             } else if (data.type === 'error') {
                 addMessage('error', data.text);
@@ -250,11 +728,10 @@
             const msg = document.createElement('div');
             msg.className = `message ${type}`;
 
-            const label = document.createElement('div');
-            label.className = 'message-label';
-            label.textContent = type === 'user' ? 'คุณ' : type === 'jarvis' ? 'Jarvis' : '';
-
             if (type !== 'function' && type !== 'error') {
+                const label = document.createElement('div');
+                label.className = 'message-label';
+                label.textContent = type === 'user' ? '🎤 คุณ' : '🤖 Jarvis';
                 msg.appendChild(label);
             }
             msg.appendChild(document.createTextNode(text));
@@ -262,37 +739,105 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
+        // Status
         async function updateStatus() {
             try {
                 const resp = await fetch('/api/status');
                 const data = await resp.json();
 
-                discordStatus.textContent = `Discord: ${data.discord ? '✅' : '❌'}`;
-                discordStatus.className = `status-item ${data.discord ? 'connected' : 'disconnected'}`;
-
-                voiceStatus.textContent = `Voice: ${data.voice ? '✅' : '❌'}`;
-                voiceStatus.className = `status-item ${data.voice ? 'connected' : 'disconnected'}`;
+                setStatusPill(discordStatus, data.discord);
+                setStatusPill(voiceStatus, data.voice);
+                setStatusPill(llmStatus, !!data.llm);
             } catch (e) {
-                discordStatus.textContent = 'Discord: ❌';
-                voiceStatus.textContent = 'Voice: ❌';
+                setStatusPill(discordStatus, false);
+                setStatusPill(voiceStatus, false);
+                setStatusPill(llmStatus, false);
             }
+        }
+
+        function setStatusPill(el, connected) {
+            el.classList.toggle('connected', connected);
+            el.classList.toggle('disconnected', !connected);
+        }
+
+        // Audio visualizer
+        function startVisualizer(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 32;
+
+            const bars = visualizer.querySelectorAll('.visualizer-bar');
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function draw() {
+                analyser.getByteFrequencyData(dataArray);
+                bars.forEach((bar, i) => {
+                    const value = dataArray[i % dataArray.length] || 0;
+                    const height = Math.max(4, (value / 255) * 28);
+                    bar.style.height = height + 'px';
+                    bar.style.animation = 'none';
+                });
+                animFrameId = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function stopVisualizer() {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            visualizer.querySelectorAll('.visualizer-bar').forEach(bar => {
+                bar.style.height = '4px';
+                bar.style.animation = '';
+            });
         }
 
         // Recording
         async function startRecording() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                // Use best available codec
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                    ? 'audio/webm;codecs=opus'
+                    : 'audio/webm';
+
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: mimeType,
+                    audioBitsPerSecond: 64000
+                });
                 audioChunks = [];
 
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
                 mediaRecorder.onstop = sendAudio;
 
-                mediaRecorder.start();
+                mediaRecorder.start(200); // Collect chunks every 200ms
                 isRecording = true;
+
                 micBtn.classList.add('recording');
+                micRing.classList.add('recording');
+                micLabel.classList.add('recording');
+                micLabel.textContent = '🔴 กำลังฟัง...';
+                visualizer.classList.add('active');
+
+                startVisualizer(stream);
             } catch (e) {
-                addMessage('error', 'ไม่สามารถเข้าถึงไมโครโฟน');
+                addMessage('error', '❌ ไม่สามารถเข้าถึงไมโครโฟน');
+                console.error('Mic error:', e);
             }
         }
 
@@ -301,30 +846,43 @@
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(t => t.stop());
                 isRecording = false;
+
                 micBtn.classList.remove('recording');
+                micRing.classList.remove('recording');
+                micLabel.classList.remove('recording');
+                micLabel.textContent = 'กดค้างเพื่อพูด';
+                visualizer.classList.remove('active');
+
+                processing.classList.add('visible');
+                stopVisualizer();
             }
         }
 
         async function sendAudio() {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
+            const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            console.log(`Audio: ${blob.size} bytes, type: ${blob.type}`);
 
-            reader.onloadend = () => {
-                const base64 = reader.result.split(',')[1];
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'audio', data: base64 }));
-                }
-            };
+            if (blob.size < 1000) {
+                processing.classList.remove('visible');
+                addMessage('error', 'เสียงสั้นเกินไป กดค้างนานขึ้นครับ');
+                return;
+            }
 
-            reader.readAsDataURL(blob);
+            // Send as binary (faster than base64 JSON)
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(blob);
+            }
         }
 
         // Event listeners
-        micBtn.addEventListener('mousedown', startRecording);
+        micBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startRecording(); });
         micBtn.addEventListener('mouseup', stopRecording);
         micBtn.addEventListener('mouseleave', stopRecording);
         micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
-        micBtn.addEventListener('touchend', stopRecording);
+        micBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+        // Prevent context menu on long press
+        micBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Init
         connect();

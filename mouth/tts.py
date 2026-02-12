@@ -8,7 +8,7 @@ import logging
 import os
 import discord
 import edge_tts
-from config import TTS_VOICE, TTS_ENABLED
+from config import TTS_VOICE, TTS_ENABLED, FFMPEG_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -53,16 +53,21 @@ async def speak(text: str, voice_client: discord.VoiceClient):
         
         # Use event to wait for completion
         finished = asyncio.Event()
+        # Store loop reference BEFORE the callback runs in another thread
         loop = asyncio.get_running_loop()
         
         def after_play(error):
             if error:
                 logger.error(f"TTS playback error: {error}")
-            # Use stored loop reference
-            loop.call_soon_threadsafe(finished.set)
+            # Use stored loop reference (safe for cross-thread)
+            try:
+                loop.call_soon_threadsafe(finished.set)
+            except RuntimeError:
+                pass  # Loop already closed
         
-        # Play TTS
-        source = discord.FFmpegPCMAudio(audio_path)
+        # Play TTS with explicit ffmpeg path
+        logger.info(f"Using ffmpeg: {FFMPEG_PATH}")
+        source = discord.FFmpegPCMAudio(audio_path, executable=FFMPEG_PATH)
         voice_client.play(source, after=after_play)
         
         # Wait for TTS to finish (max 10 seconds)

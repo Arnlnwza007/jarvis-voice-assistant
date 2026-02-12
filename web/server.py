@@ -88,7 +88,6 @@ def parse_simple_command(text: str) -> dict | None:
     
     return None
 
-logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Jarvis Voice Assistant")
 
@@ -135,28 +134,46 @@ async def voice_websocket(websocket: WebSocket):
     """WebSocket endpoint for voice input from browser."""
     await websocket.accept()
     connected_clients.add(websocket)
-    logger.info("🌐 Web client connected")
+    logger.info("Web client connected")
     
     try:
         while True:
-            data = await websocket.receive_json()
+            # Receive message (can be binary or JSON)
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                logger.info("WebSocket disconnect received")
+                break
             
-            if data.get("type") == "audio":
-                # Decode audio from browser
-                audio_base64 = data.get("data", "")
-                audio_bytes = base64.b64decode(audio_base64)
-                
+            logger.info(f"WebSocket received message type: {message.get('type')}")
+            
+            audio_bytes = None
+            
+            if "bytes" in message and message["bytes"]:
+                # Binary audio data (faster path)
+                audio_bytes = message["bytes"]
+            elif "text" in message and message["text"]:
+                # JSON with base64 audio
+                import json
+                data = json.loads(message["text"])
+                if data.get("type") == "audio":
+                    audio_base64 = data.get("data", "")
+                    audio_bytes = base64.b64decode(audio_base64)
+            
+            if audio_bytes and len(audio_bytes) > 1000:
                 # Save to temp file
                 with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
                     f.write(audio_bytes)
                     temp_path = f.name
                 
+                logger.info(f"Audio received: {len(audio_bytes)} bytes")
+                
                 try:
-                    # Transcribe with Whisper
-                    text = transcriber.transcribe(temp_path)
+                    # Transcribe with Whisper (run in thread to avoid blocking event loop)
+                    # Force Thai language for better performance
+                    text = await asyncio.to_thread(transcriber.transcribe, temp_path, language="th")
                     
                     if text:
-                        logger.info(f"🎤 Heard: {text}")
+                        logger.info(f"Heard: {text}")
                         
                         # Send transcription to client
                         await websocket.send_json({
@@ -168,14 +185,19 @@ async def voice_websocket(websocket: WebSocket):
                         result = parse_simple_command(text)
                         
                         if result:
-                            logger.info(f"⚡ Simple command: {result['function']}")
+                            logger.info(f"Simple command: {result['function']}")
                         else:
-                            # No LLM - just return friendly message for unrecognized commands
-                            logger.info(f"❓ Unknown command: {text}")
-                            result = {
-                                "function": None,
-                                "response": f"ไม่เข้าใจคำสั่ง ลองพูดว่า 'เปิดเพลง [ชื่อเพลง]' ครับ"
-                            }
+                            # Fallback to LLM for general conversation
+                            logger.info(f"No simple match, using LLM: {text}")
+                            try:
+                                result = await llm.chat(text)
+                                logger.info(f"LLM result: {result}")
+                            except Exception as e:
+                                logger.error(f"LLM error: {e}")
+                                result = {
+                                    "function": None,
+                                    "response": f"ขออภัยครับ เกิดข้อผิดพลาด"
+                                }
                         
                         # Send response to client
                         await websocket.send_json({
@@ -199,10 +221,19 @@ async def voice_websocket(websocket: WebSocket):
                         })
                         
                 finally:
-                    os.unlink(temp_path)
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
+            elif audio_bytes:
+                # Audio too short
+                await websocket.send_json({
+                    "type": "error",
+                    "text": "เสียงสั้นเกินไป กดค้างนานขึ้นครับ"
+                })
                     
     except WebSocketDisconnect:
-        logger.info("🌐 Web client disconnected")
+        logger.info("Web client disconnected")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
@@ -222,4 +253,8 @@ async def run_server():
     """Run the web server."""
     config = uvicorn.Config(app, host=WEB_HOST, port=WEB_PORT, log_level="info")
     server = uvicorn.Server(config)
-    await server.serve()
+    try:
+        await server.serve()
+    except SystemExit:
+        logger.error("Web server startup failed (port in use?)")
+        raise

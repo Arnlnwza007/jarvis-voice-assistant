@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from config import DISCORD_TOKEN
 from hand.music import music_player
+from mouth.tts import speak
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,14 @@ def create_bot():
             return
         await interaction.response.defer()
         channel = interaction.user.voice.channel
-        await channel.connect()
+        voice_client = await channel.connect()
         await interaction.followup.send(f"✅ เข้าห้อง **{channel.name}** แล้วครับ")
+        
+        # รอให้ voice connection พร้อมก่อนพูด
+        await asyncio.sleep(2)
+        
+        # Jarvis กล่าวทักทายเมื่อเข้าห้อง
+        await speak("สวัสดีครับเจ้านาย Jarvis พร้อมรับคำสั่งครับ", voice_client)
         
     @bot.tree.command(name="leave", description="ออกจากห้องเสียง")
     async def leave(interaction: discord.Interaction):
@@ -136,6 +143,9 @@ async def process_commands(bot):
                 
         except asyncio.TimeoutError:
             continue
+        except asyncio.CancelledError:
+            logger.info("🛑 Command processor stopping...")
+            break
         except Exception as e:
             logger.error(f"Command error: {e}")
 
