@@ -214,7 +214,8 @@
 
         // Connect WebSocket
         function connect() {
-            ws = new WebSocket(`ws://${location.host}/ws/voice`);
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/ws/voice`);
 
             ws.onopen = () => {
                 console.log('Connected');
