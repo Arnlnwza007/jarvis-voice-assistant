@@ -12,7 +12,7 @@ Usage:
 """
 import asyncio
 import logging
-from config import DISCORD_TOKEN, WEB_PORT
+from config import DISCORD_TOKEN, WEB_PORT, WHISPER_MODEL, WHISPER_DEVICE, OLLAMA_MODEL
 
 # Setup logging
 logging.basicConfig(
@@ -32,8 +32,8 @@ def print_banner():
     ║              🤖 JARVIS Voice Assistant                    ║
     ╠═══════════════════════════════════════════════════════════╣
     ║  🌐 Web   : http://localhost:{WEB_PORT} (Push-to-talk)         ║
-    ║  👂 Ear   : Faster-Whisper STT                            ║
-    ║  🧠 Brain : Ollama + Typhoon 2                            ║
+    ║  👂 Ear   : Whisper ({WHISPER_MODEL}) on {WHISPER_DEVICE}                   ║
+    ║  🧠 Brain : Ollama + {OLLAMA_MODEL}                      ║
     ║  🗣️ Mouth : Edge-TTS (Thai)                               ║
     ║  🎵 Music : YouTube via Discord                           ║
     ╠═══════════════════════════════════════════════════════════╣
@@ -45,6 +45,14 @@ def print_banner():
 async def preload_models():
     """Preload AI models."""
     logger.info("⏳ Loading AI models...")
+    
+    # Check FFmpeg
+    import os
+    from config import FFMPEG_PATH
+    if os.path.exists(FFMPEG_PATH):
+        logger.info(f"✅ FFmpeg found: {FFMPEG_PATH}")
+    else:
+        logger.warning(f"⚠️ FFmpeg not found at: {FFMPEG_PATH}")
     
     # Load Whisper
     try:

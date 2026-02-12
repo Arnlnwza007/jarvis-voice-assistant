@@ -6,6 +6,7 @@ import asyncio
 import logging
 import discord
 import yt_dlp
+from config import FFMPEG_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class MusicPlayer:
                 await asyncio.sleep(0.5)
             
             # Play
-            source = discord.FFmpegPCMAudio(url, **FFMPEG_OPTIONS)
+            source = discord.FFmpegPCMAudio(url, executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
             voice_client.play(source, after=lambda e: self._on_end(e))
             self.is_playing = True
             

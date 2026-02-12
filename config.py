@@ -2,6 +2,7 @@
 Jarvis Configuration
 """
 import os
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -9,6 +10,22 @@ load_dotenv()
 
 # Paths
 BASE_DIR = Path(__file__).parent
+
+# FFmpeg - ค้นหาจากระบบก่อน ถ้าไม่เจอใช้ binary ใน project
+def _find_ffmpeg():
+    """Find ffmpeg executable."""
+    # 1. Check system PATH
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        return system_ffmpeg
+    # 2. Check project directory
+    project_ffmpeg = BASE_DIR / "ffmpeg"
+    if project_ffmpeg.exists():
+        return str(project_ffmpeg)
+    # 3. Fallback to just "ffmpeg" (will error if not found)
+    return "ffmpeg"
+
+FFMPEG_PATH = os.getenv("FFMPEG_PATH", _find_ffmpeg())
 
 # Discord
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -18,14 +35,14 @@ WEB_HOST = os.getenv("WEB_HOST", "0.0.0.0")
 WEB_PORT = int(os.getenv("WEB_PORT", "8080"))
 
 # STT (Whisper)
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "medium")
-WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cuda")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
+WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
 
 # LLM (Ollama)
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "typhoon2:8b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1:8b")
 
 # TTS
-TTS_VOICE = os.getenv("TTS_VOICE", "th-TH-PremwadeeNeural")
+TTS_VOICE = os.getenv("TTS_VOICE", "th-TH-NiwatNeural")
 TTS_ENABLED = os.getenv("TTS_ENABLED", "true").lower() == "true"
 
 # Lavalink Server (Free hosting)
