@@ -626,6 +626,67 @@
             </div>
         </div>
 
+        <!-- Text Input -->
+        <div class="input-area">
+            <input type="text" id="chat-input" placeholder="พิมพ์คำสั่ง..." autocomplete="off">
+            <button id="send-btn">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"></path>
+                </svg>
+            </button>
+        </div>
+
+        <style>
+            .input-area {
+                display: flex;
+                gap: 0.8rem;
+                margin-top: 1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            #chat-input {
+                flex: 1;
+                background: var(--glass);
+                border: 1px solid var(--glass-border);
+                border-radius: var(--radius-full);
+                padding: 0.8rem 1.2rem;
+                color: var(--text-primary);
+                font-family: inherit;
+                font-size: 0.95rem;
+                outline: none;
+                transition: all 0.3s ease;
+            }
+
+            #chat-input:focus {
+                border-color: var(--accent-cyan);
+                box-shadow: 0 0 15px rgba(6, 214, 160, 0.1);
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            #send-btn {
+                background: var(--accent-cyan);
+                border: none;
+                border-radius: 50%;
+                width: 48px;
+                height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: var(--bg-primary);
+                transition: all 0.3s ease;
+            }
+
+            #send-btn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 15px rgba(6, 214, 160, 0.4);
+            }
+
+            #send-btn:active {
+                transform: scale(0.95);
+            }
+        </style>
+
         <!-- Mic control -->
         <div class="mic-section">
             <div class="visualizer" id="visualizer">
@@ -665,6 +726,8 @@
         const micRing = document.getElementById('mic-ring');
         const micLabel = document.getElementById('mic-label');
         const chatBox = document.getElementById('chat-box');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
         const visualizer = document.getElementById('visualizer');
         const processing = document.getElementById('processing');
         const discordStatus = document.getElementById('discord-status');
@@ -679,6 +742,29 @@
         let audioContext = null;
         let analyser = null;
         let animFrameId = null;
+
+        // Chat Logic
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            // Add user message to UI
+            addMessage('user', text);
+
+            // Send to server
+            ws.send(JSON.stringify({
+                type: 'text',
+                text: text
+            }));
+
+            chatInput.value = '';
+            processing.classList.add('visible');
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
 
         // WebSocket
         function connect() {
@@ -796,56 +882,128 @@
             });
         }
 
-        // Recording
+        // Recording using standard MediaRecorder with High Quality Constraints
         async function startRecording() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                if (isRecording) return;
+                
+                // Get Stream with High Quality Audio
+                const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         channelCount: 1,
-                        sampleRate: 16000,
-                        echoCancellation: true,
-                        noiseSuppression: true,
+                        sampleRate: { ideal: 48000 },
+                        sampleSize: 16,
+                        echoCancellation: false,
+                        noiseSuppression: false,
                         autoGainControl: true
                     }
                 });
+                
+                // Determine supported mime type
+                let mimeType = 'audio/webm';
+                const types = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/ogg;codecs=opus',
+                    'audio/mp4',
+                    'audio/aac'
+                ];
+                
+                for (const type of types) {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        mimeType = type;
+                        break;
+                    }
+                }
+                
+                console.log("Using MIME type:", mimeType);
 
-                // Use best available codec
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-                    ? 'audio/webm;codecs=opus'
-                    : 'audio/webm';
-
-                mediaRecorder = new MediaRecorder(stream, {
+                // High Bitrate Recording
+                mediaRecorder = new MediaRecorder(stream, { 
                     mimeType: mimeType,
-                    audioBitsPerSecond: 64000
+                    audioBitsPerSecond: 128000 
                 });
+                
                 audioChunks = [];
 
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) audioChunks.push(e.data);
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
                 };
-                mediaRecorder.onstop = sendAudio;
 
-                mediaRecorder.start(200); // Collect chunks every 200ms
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: mimeType });
+                    
+                    // Cleanup tracks
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Send to server
+                    if (audioBlob.size > 0) {
+                        console.log(`Sending audio: ${audioBlob.size} bytes, ${audioBlob.type}`);
+                        
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(audioBlob);
+                        } else {
+                            console.error("WebSocket not connected");
+                            connect();
+                        }
+                    } else {
+                        console.warn("Audio too short");
+                    }
+                    
+                    processing.classList.remove('visible');
+                    stopVisualizer();
+                };
+
+                mediaRecorder.start();
                 isRecording = true;
+                
+                // Visualizer (Optional - Fails quietly)
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        // Re-use or create context
+                        if (!audioContext) audioContext = new AudioContext();
+                        else if (audioContext.state === 'closed') audioContext = new AudioContext();
+                        
+                        if (audioContext.state === 'suspended') await audioContext.resume();
+                        
+                        analyser = audioContext.createAnalyser();
+                        const source = audioContext.createMediaStreamSource(stream);
+                        source.connect(analyser);
+                        analyser.fftSize = 32;
+                        startVisualizer(analyser);
+                        window.currentSource = source;
+                    }
+                } catch (e) {
+                    console.warn("Visualizer failed to initialize (Audio only mode):", e);
+                }
 
+                currentStream = stream; // Store for cleanup
+
+                // UI Updates
                 micBtn.classList.add('recording');
                 micRing.classList.add('recording');
                 micLabel.classList.add('recording');
-                micLabel.textContent = '🔴 กำลังฟัง...';
+                micLabel.textContent = 'กำลังฟัง...';
                 visualizer.classList.add('active');
 
-                startVisualizer(stream);
-            } catch (e) {
-                addMessage('error', '❌ ไม่สามารถเข้าถึงไมโครโฟน');
-                console.error('Mic error:', e);
+            } catch (err) {
+                console.error('Recording Error:', err);
+                addMessage('error', '❌ ไม่สามารถเข้าถึงไมโครโฟน: ' + err.message);
+                isRecording = false;
             }
         }
 
-        function stopRecording() {
+                function stopRecording() {
             if (mediaRecorder && isRecording) {
                 mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(t => t.stop());
                 isRecording = false;
+
+                if (window.currentSource) {
+                    window.currentSource.disconnect();
+                }
 
                 micBtn.classList.remove('recording');
                 micRing.classList.remove('recording');
@@ -854,37 +1012,36 @@
                 visualizer.classList.remove('active');
 
                 processing.classList.add('visible');
-                stopVisualizer();
             }
         }
 
-        async function sendAudio() {
-            const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-            console.log(`Audio: ${blob.size} bytes, type: ${blob.type}`);
-
-            if (blob.size < 1000) {
-                processing.classList.remove('visible');
-                addMessage('error', 'เสียงสั้นเกินไป กดค้างนานขึ้นครับ');
-                return;
-            }
-
-            // Send as binary (faster than base64 JSON)
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(blob);
-            }
-        }
 
         // Event listeners
-        micBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startRecording(); });
-        micBtn.addEventListener('mouseup', stopRecording);
-        micBtn.addEventListener('mouseleave', stopRecording);
-        micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
-        micBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+        micBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startRecording();
+        });
+        micBtn.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            stopRecording();
+        });
+        micBtn.addEventListener('mouseleave', () => {
+            if (isRecording) stopRecording();
+        });
 
-        // Prevent context menu on long press
-        micBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+        micBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startRecording();
+        });
+        micBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopRecording();
+        });
 
-        // Init
+        // Prevent context menu
+        micBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Initialize
         connect();
         setInterval(updateStatus, 5000);
     </script>

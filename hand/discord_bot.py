@@ -107,12 +107,96 @@ async def process_commands(bot):
             logger.info(f"📥 Received: {func}({args})")
             
             # Get voice client
+            # Get voice client
             voice_client = bot.voice_clients[0] if bot.voice_clients else None
             
+            # Helper to find a channel with users
+            def find_active_channel(guilds):
+                for guild in guilds:
+                    for vc in guild.voice_channels:
+                        # Find channel with non-bot members
+                        if any(not m.bot for m in vc.members):
+                            return vc
+                return None
+
+            if func == "join":
+                if voice_client:
+                    await speak("ผมอยู่ในห้องแล่วครับ", voice_client)
+                    continue
+                
+                channel = find_active_channel(bot.guilds)
+                if channel:
+                    logger.info(f"Joining {channel.name}...")
+                    voice_client = await channel.connect()
+                    
+                    # Custom Join Sound: Find ANY audio file in assets
+                    import os
+                    from config import FFMPEG_PATH
+                    
+                    join_sound = None
+                    assets_dir = "assets"
+                    
+                    if os.path.exists(assets_dir):
+                        audio_files = []
+                        for f in os.listdir(assets_dir):
+                            if f.lower().endswith(('.mp3', '.m4a', '.wav', '.ogg')):
+                                audio_files.append(os.path.join(assets_dir, f))
+                        
+                        if audio_files:
+                            # Prioritize file with 'join' in name
+                            for f in audio_files:
+                                if "join" in os.path.basename(f).lower():
+                                    join_sound = f
+                                    break
+                            # Fallback to first file
+                            if not join_sound:
+                                join_sound = audio_files[0]
+
+                    if join_sound:
+                        source = discord.PCMVolumeTransformer(
+                            discord.FFmpegPCMAudio(join_sound, executable=FFMPEG_PATH)
+                        )
+                        source.volume = music_player.volume
+                        voice_client.play(source)
+                        logger.info(f"🎵 Playing join sound: {join_sound}")
+                    else:
+                        await speak("สวัสดีครับเจ้านาย", voice_client)
+                else:
+                    logger.warning("❌ No active voice channel found.")
+                continue
+
             if not voice_client:
                 logger.warning("⚠️ No voice client - use /join first!")
                 continue
-            
+
+            if func == "leave":
+                await speak("บ๊ายบายครับ", voice_client)
+                await voice_client.disconnect()
+                continue
+
+            elif func == "move_channel":
+                # Find a different channel with users
+                current_channel = voice_client.channel
+                target_channel = None
+                
+                for guild in bot.guilds:
+                    for vc in guild.voice_channels:
+                        if vc.id == current_channel.id:
+                            continue
+                        if any(not m.bot for m in vc.members):
+                            target_channel = vc
+                            break
+                    if target_channel: break
+                
+                if target_channel:
+                    await speak("กำลังย้ายห้องครับ", voice_client)
+                    await voice_client.move_to(target_channel)
+                    await asyncio.sleep(1) # Wait for move
+                    await speak("ตามมาแล้วครับ", voice_client)
+                else:
+                    await speak("ไม่เจอห้องที่จะย้ายไปครับ", voice_client)
+                continue
+
             if func == "play_music":
                 song = args.get("song_name", "")
                 
@@ -138,6 +222,20 @@ async def process_commands(bot):
             elif func == "skip":
                 await music_player.skip(voice_client)
                 
+            elif func == "volume_up":
+                # Increase volume by 20%
+                current_vol = int(music_player.volume * 100)
+                new_vol = min(100, current_vol + 20)
+                music_player.set_volume(new_vol, voice_client)
+                logger.info(f"🔊 Volume up: {new_vol}%")
+                
+            elif func == "volume_down":
+                # Decrease volume by 20%
+                current_vol = int(music_player.volume * 100)
+                new_vol = max(0, current_vol - 20)
+                music_player.set_volume(new_vol, voice_client)
+                logger.info(f"🔉 Volume down: {new_vol}%")
+
             elif func == "set_volume":
                 music_player.set_volume(args.get("level", 50), voice_client)
                 

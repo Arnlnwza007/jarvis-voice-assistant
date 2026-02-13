@@ -24,7 +24,7 @@ YDL_OPTIONS = {
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -reconnect_at_eof 1',
-    'options': '-vn -filter:a volume=0.5'
+    'options': '-vn' 
 }
 
 
@@ -89,6 +89,11 @@ class MusicPlayer:
             
             # Play
             source = discord.FFmpegPCMAudio(url, executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
+            
+            # Wrap in Volume Transformer
+            source = discord.PCMVolumeTransformer(source)
+            source.volume = self.volume
+            
             voice_client.play(source, after=lambda e: self._on_end(e))
             self.is_playing = True
             
@@ -121,13 +126,23 @@ class MusicPlayer:
         return False
         
     async def resume_music(self, voice_client) -> bool:
-        if voice_client and voice_client.is_paused():
-            voice_client.resume()
-            return True
+        if voice_client:
+            if voice_client.is_paused():
+                voice_client.resume()
+                logger.info("▶️ Resumed music")
+                return True
+            else:
+                logger.warning(f"Cannot resume: is_paused={voice_client.is_paused()}, is_playing={voice_client.is_playing()}")
+        else:
+            logger.error("Cannot resume: No voice client")
         return False
         
     def set_volume(self, level: int, voice_client):
-        self.volume = max(0, min(100, level)) / 100
+        """Set volume (0-100)."""
+        vol = max(0, min(100, level)) / 100.0
+        self.volume = vol
+        if voice_client and voice_client.source and isinstance(voice_client.source, discord.PCMVolumeTransformer):
+            voice_client.source.volume = vol
         
     async def skip(self, voice_client) -> bool:
         return await self.stop_music(voice_client)

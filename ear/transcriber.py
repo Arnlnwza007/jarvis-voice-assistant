@@ -59,22 +59,32 @@ class Transcriber:
                 wav_path = f.name
                 
             # Convert using ffmpeg binary
-            # cmd: ffmpeg -y -i input.webm -ar 16000 -ac 1 -c:a pcm_s16le output.wav
+            # cmd: ffmpeg -y -f webm -i input.webm -ar 16000 -ac 1 -c:a pcm_s16le output.wav
+            # FFmpeg Command Refinement
             cmd = [
                 FFMPEG_PATH, '-y',
-                '-v', 'error',       # Less verbose
+                '-v', 'error',       
+                '-f', 'webm',        
+                '-ignore_unknown',   
+                '-vn', '-sn',        # No video/subs
                 '-i', audio_path,
-                '-ar', '16000',      # Sample rate 16k
-                '-ac', '1',          # Mono
-                '-c:a', 'pcm_s16le', # PCM 16-bit
+                '-ar', '16000',      
+                '-ac', '1',          
+                '-c:a', 'pcm_s16le', 
                 wav_path
             ]
             
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             
-            # Force decoding options for Thai
+            # Transcription Options
             import whisper
-            options = whisper.DecodingOptions(language=language, without_timestamps=True, fp16=False)
+            # Add initial prompt for better Thai context
+            options = whisper.DecodingOptions(
+                language="th", 
+                without_timestamps=True, 
+                fp16=False,
+                prompt="นี่คือการสั่งงานด้วยเสียงภาษาไทย"
+            )
             
             # Load from converted WAV
             audio = whisper.load_audio(wav_path)
